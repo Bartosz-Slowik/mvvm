@@ -1,18 +1,16 @@
 use crate::egui::Color32;
-use crate::models::{Product, ShortProduct};
+use crate::models::Product;
 use crate::viewmodel::ProductViewModel;
 use bson::oid::ObjectId;
-use eframe::egui::{self, Button, CentralPanel, Context, TextEdit};
+use eframe::egui::{self, CentralPanel, Context, TextEdit};
+use async_std::task;
 
+#[derive(Default)]
 enum Menu {
+    #[default]
     Products,
     AddProduct,
     ProductDetail,
-}
-impl Default for Menu {
-    fn default() -> Self {
-        Menu::Products
-    }
 }
 
 #[derive(Default)]
@@ -44,6 +42,7 @@ impl ProductView {
             match self.menu {
                 Menu::Products => {
                     self.product_list_ui(ui);
+                    
                 }
                 Menu::AddProduct => {
                     self.add_product_ui(ui);
@@ -87,12 +86,17 @@ impl ProductView {
             if ui.button("Save").clicked() {
                 product.price = price.parse().unwrap_or(0);
                 product.quantity = quantity.parse().unwrap_or(0);
-                self.view_model.update_product(product.clone());
-                self.menu = Menu::Products;
-                self.view_model.fetch_short_products();
+                let update_handle = self.view_model.update_product(product.clone());
+            
+                // Wait for the update to complete before fetching the products
+                task::block_on(async {
+                    update_handle.await;
+                    self.menu = Menu::Products;
+                    self.view_model.fetch_short_products();
+                });
             }
             if ui.button("Delete").clicked() {
-                self.view_model.delete_product(product._id.clone());
+                self.view_model.delete_product(product._id);
                 self.menu = Menu::Products;
                 self.view_model.fetch_short_products();
             }
@@ -128,7 +132,7 @@ impl ProductView {
                             .clicked()
                         {
                             self.view_model
-                                .fetch_product_detail(short_product._id.clone());
+                                .fetch_product_detail(short_product._id);
                             self.menu = Menu::ProductDetail;
                         }
                     }

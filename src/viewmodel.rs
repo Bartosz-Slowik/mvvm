@@ -66,8 +66,6 @@ impl ProductViewModel {
     }
 
     pub fn create_product(&self, product: Product) {
-        println!("asdasd");
-        let short_products_clone = Arc::clone(&self.short_products);
         let error_clone = Arc::clone(&self.error);
         
         task::spawn(async move {
@@ -108,8 +106,8 @@ impl ProductViewModel {
             }
         });
     }
-    pub fn update_product(&self, product: Product) {
-        let product_id = product._id.clone();
+    pub fn update_product(&self, product: Product) -> task::JoinHandle<()> {
+        let product_id = product._id;
         let error_clone = Arc::clone(&self.error);
     
         task::spawn(async move {
@@ -132,6 +130,6 @@ impl ProductViewModel {
                     *error_clone.lock().unwrap() = Some("Failed to update product".into());
                 }
             }
-        });
+        })
     }
 }
